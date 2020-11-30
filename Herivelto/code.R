@@ -1,5 +1,6 @@
 dat <- matrix(c(63, 78, 94, 65),
-              ncol = 2)
+  ncol = 2
+)
 
 # 1st method:
 test1 <- chisq.test(dat,
