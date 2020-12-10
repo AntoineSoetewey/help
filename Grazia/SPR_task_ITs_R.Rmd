@@ -23,16 +23,21 @@ summary(cars)
 
 You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
+```{r, echo=FALSE}
 
-path_forplots = "/Users/grace/Desktop/SPR_task_ITs/plots"
+path_forplots = "plots/"
 
 ```
-```{r pressure, echo=FALSE}
+
+```{r, echo=FALSE}
 #Comment :)
 # nrow(ITs_SPR_task_RTs)
 ```
+
 ```{r}
+library(readxl)
+ITs_SPR_task_RTs <- read_xlsx("ITs_SPR_task_RTs.xlsx")
+
 str(ITs_SPR_task_RTs)
 
 library(Rmisc)
@@ -44,6 +49,7 @@ library(lattice)
 # Creating subset for 1 participant
 IT001 = droplevels(subset(ITs_SPR_task_RTs, participant_ID == "IT001"))
 
+library(ggplot2)
 # plotting histogram for 1 participant (RT*condition*word_position)
 ggplot(IT001, aes(x=reaction_time)) + geom_histogram()+ theme(axis.text=element_text(size=20), axis.title=element_text(size=20,face="bold"), plot.title = element_text(size = 20, face = "bold", vjust=0.3), legend.title=element_text(size=20), legend.text = element_text(size=20)) + facet_wrap( condition ~ position) + theme(strip.text.x = element_text(size= 20), strip.text.y = element_text(size= 20)) + ggtitle("Reaction times raw RTs IT001")
 
@@ -56,3 +62,26 @@ ggsave(paste0(path_forplots, "RTs_conditionXposition_IT001.jpeg"), width = 40, h
 
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+
+```{r, fig.width=20, fig.height=20}
+ITs_SPR_task_RTs$participant_ID <- as.factor(ITs_SPR_task_RTs$participant_ID)
+levels(ITs_SPR_task_RTs$participant_ID)
+
+for (i in levels(ITs_SPR_task_RTs$participant_ID)) {
+  # Creating subset for 1 participant
+IT001 = droplevels(subset(ITs_SPR_task_RTs, participant_ID == i))
+
+# plotting histogram for 1 participant (RT*condition*word_position)
+ggplot(IT001, aes(x=reaction_time)) + geom_histogram()+ theme(axis.text=element_text(size=20), axis.title=element_text(size=20,face="bold"), plot.title = element_text(size = 20, face = "bold", vjust=0.3), legend.title=element_text(size=20), legend.text = element_text(size=20)) + facet_wrap( condition ~ position) + theme(strip.text.x = element_text(size= 20), strip.text.y = element_text(size= 20)) + ggtitle("Reaction times raw RTs IT001")
+
+#
+ggsave(paste0(path_forplots, "RTs_conditionXposition_", i, ".jpeg"), width = 40, height = 40, units = "in")
+#
+}
+
+
+
+```
+
