@@ -1,0 +1,58 @@
+---
+title: "SPR task ITs"
+author: "Grazia"
+date: "11/26/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+
+path_forplots = "/Users/grace/Desktop/SPR_task_ITs/plots"
+
+```
+```{r pressure, echo=FALSE}
+#Comment :)
+# nrow(ITs_SPR_task_RTs)
+```
+```{r}
+str(ITs_SPR_task_RTs)
+
+library(Rmisc)
+library(lattice)
+
+```
+```{r, fig.width=20, fig.height=20}
+
+# Creating subset for 1 participant
+IT001 = droplevels(subset(ITs_SPR_task_RTs, participant_ID == "IT001"))
+
+# plotting histogram for 1 participant (RT*condition*word_position)
+ggplot(IT001, aes(x=reaction_time)) + geom_histogram()+ theme(axis.text=element_text(size=20), axis.title=element_text(size=20,face="bold"), plot.title = element_text(size = 20, face = "bold", vjust=0.3), legend.title=element_text(size=20), legend.text = element_text(size=20)) + facet_wrap( condition ~ position) + theme(strip.text.x = element_text(size= 20), strip.text.y = element_text(size= 20)) + ggtitle("Reaction times raw RTs IT001")
+
+#
+ggsave(paste0(path_forplots, "RTs_conditionXposition_IT001.jpeg"), width = 40, height = 40, units = "in")
+#
+
+```
+
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
