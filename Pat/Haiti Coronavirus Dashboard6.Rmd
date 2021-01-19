@@ -1,0 +1,540 @@
+---
+title: "Coronavirus Haiti Dashboard"
+author: "Pat Stephenson"
+date: "19/01/2021"
+output:
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    social: menu
+    source_code: embed
+    vertical_layout: fill
+---
+    
+```{r setup, include=FALSE}
+#------------------ Packages ------------------
+library(flexdashboard)
+# install.packages("devtools")
+# devtools::install_github("RamiKrispin/coronavirus", force = TRUE)
+library(coronavirus)
+data(coronavirus)
+# View(coronavirus)
+# max(coronavirus$date)
+`%>%` <- magrittr::`%>%`
+#------------------ Parameters ------------------
+# Set colors
+# https://www.w3.org/TR/css-color-3/#svg-color
+confirmed_color <- "black"
+active_color <- "#1f77b4"
+recovered_color <- "forestgreen"
+death_color <- "red"
+#------------------ Data ------------------
+df <- coronavirus %>%
+  # dplyr::filter(date == max(date)) %>%
+  dplyr::filter(country == "Haiti") %>%
+  dplyr::group_by(country, type) %>%
+  dplyr::summarise(total = sum(cases)) %>%
+  tidyr::pivot_wider(
+    names_from = type,
+    values_from = total
+  ) %>%
+   dplyr::mutate(unrecovered = confirmed - ifelse(is.na(recovered), 0, recovered) - ifelse(is.na(death), 0, death)) %>%
+  dplyr::mutate(unrecovered = confirmed - ifelse(is.na(death), 0, death)) %>%
+  dplyr::arrange(-confirmed) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(country = dplyr::if_else(country == "United Arab Emirates", "UAE", country)) %>%
+  dplyr::mutate(country = dplyr::if_else(country == "Mainland China", "China", country)) %>%
+  dplyr::mutate(country = dplyr::if_else(country == "North Macedonia", "N.Macedonia", country)) %>%
+  dplyr::mutate(country = trimws(country)) %>%
+  dplyr::mutate(country = factor(country, levels = country))
+df_daily <- coronavirus %>%
+  dplyr::filter(country == "Haiti") %>%
+  dplyr::group_by(date, type) %>%
+  dplyr::summarise(total = sum(cases, na.rm = TRUE)) %>%
+  tidyr::pivot_wider(
+    names_from = type,
+    values_from = total
+  ) %>%
+  dplyr::arrange(date) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(active = confirmed - death - recovered) %>%
+  #dplyr::mutate(active = confirmed - death) %>%
+  dplyr::mutate(
+    confirmed_cum = cumsum(confirmed),
+    death_cum = cumsum(death),
+    recovered_cum = cumsum(recovered),
+    active_cum = cumsum(active)
+  )
+df1 <- coronavirus %>% dplyr::filter(date == max(date))
+
+df_tree <- df %>%
+  dplyr::group_by(country, type) %>%
+  dplyr::summarise(total = sum(cases), .groups = "drop") %>%
+  dplyr::mutate(type = ifelse(type == "confirmed", "Confirmed", type),
+                type = ifelse(type == "recovered", "Recovered", type),
+                type = ifelse(type == "death", "Death", type)) %>%
+  tidyr::pivot_wider(names_from = type, values_from = total) %>%
+  dplyr::mutate(Active = Confirmed - Death - Recovered) %>%
+  tidyr::pivot_longer(cols = -country, names_to = "type", values_to = "total")
+
+df_world <- df_tree %>%
+  dplyr::group_by(type) %>%
+  dplyr::summarise(total = sum(total), .groups = "drop") %>%
+  tidyr::pivot_wider(names_from = type, values_from = total)
+
+names(df_world) <- tolower(names(df_world))
+```
+
+Summary
+=======================================================================
+
+Row {data-width=400}
+-----------------------------------------------------------------------
+
+### confirmed {.value-box}
+
+```{r}
+valueBox(
+  value = paste(format(sum(df$confirmed), big.mark = ","), "", sep = " "),
+  caption = "Total confirmed cases",
+  icon = "fas fa-user-md",
+  color = confirmed_color
+)
+
+```
+
+### death {.value-box}
+
+```{r}
+valueBox(
+  value = paste(format(sum(df$death, na.rm = TRUE), big.mark = ","), " (",
+    round(100 * sum(df$death, na.rm = TRUE) / sum(df$confirmed), 1),
+    "%)",
+    sep = ""
+  ),
+  caption = "Death cases (death rate)",
+  icon = "fas fa-heart-broken",
+  color = death_color
+)
+
+
+```
+
+### recovered {.value-box}
+
+```{r}
+valueBox(
+  value = paste(format(sum(df$recovered), big.mark = ","), "", sep = " "),
+  caption = "Total recovered",
+  icon = "fas fa-user-md",
+  color = recovered_color
+)
+```
+
+### active {.value-box}
+
+```{r}
+valueBox(value = paste(format(df_world$active[1], big.mark = ","), " (",
+                       round(100 * df_world$active[1] / df_world$confirmed[1], 1), 
+                       "%)", sep = ""), 
+         caption = "Active Cases", icon = "fas fa-ambulance", 
+         color = active_color)
+```
+
+Row
+-----------------------------------------------------------------------
+
+### **Daily cumulative cases by type** (Haiti only)
+    
+```{r}
+plotly::plot_ly(data = df_daily) %>%
+  plotly::add_trace(
+    x = ~date,
+    # y = ~active_cum,
+    y = ~confirmed_cum,
+    type = "scatter",
+    mode = "lines+markers",
+    # name = "Active",
+    name = "Confirmed",
+    line = list(color = active_color),
+    marker = list(color = active_color)
+  ) %>%
+  plotly::add_trace(
+    x = ~date,
+    y = ~death_cum,
+    type = "scatter",
+    mode = "lines+markers",
+    name = "Death",
+    line = list(color = death_color),
+    marker = list(color = death_color)
+  ) %>%
+  # plotly::add_annotations(
+  #   x = as.Date("2020-02-04"),
+  #   y = 1,
+  #   text = paste("First case"),
+  #   xref = "x",
+  #   yref = "y",
+  #   arrowhead = 5,
+  #   arrowhead = 3,
+  #   arrowsize = 1,
+  #   showarrow = TRUE,
+  #   ax = -10,
+  #   ay = -90
+  # ) %>%
+ 
+  plotly::layout(
+    title = "",
+    yaxis = list(title = "Cumulative number of cases"),
+    xaxis = list(title = "Date"),
+    legend = list(x = 0.1, y = 0.9),
+    hovermode = "compare"
+  )
+```
+
+Comparison
+=======================================================================
+
+
+Column {data-width=400}
+-------------------------------------
+
+
+### **Daily new confirmed cases**
+    
+```{r}
+daily_confirmed <- coronavirus %>%
+  dplyr::filter(type == "confirmed") %>%
+  dplyr::filter(date >= "2020-02-29") %>%
+  dplyr::mutate(country = country) %>%
+  dplyr::group_by(date, country) %>%
+  dplyr::summarise(total = sum(cases)) %>%
+  dplyr::ungroup() %>%
+  tidyr::pivot_wider(names_from = country, values_from = total)
+#----------------------------------------
+# Plotting the data
+daily_confirmed %>%
+  plotly::plot_ly() %>%
+  plotly::add_trace(
+    x = ~date,
+    y = ~Haiti,
+    type = "scatter",
+    mode = "lines+markers",
+    name = "Haiti"
+  ) %>%
+  # plotly::add_trace(
+  #   x = ~date,
+  #   y = ~France,
+  #   type = "scatter",
+  #   mode = "lines+markers",
+  #   name = "France"
+  # ) %>%
+  # plotly::add_trace(
+  #   x = ~date,
+  #   y = ~Spain,
+  #   type = "scatter",
+  #   mode = "lines+markers",
+  #   name = "Spain"
+  # ) %>%
+  plotly::add_trace(
+    x = ~date,
+    y = ~ `Dominican Republic`,
+    type = "scatter",
+    mode = "lines+markers",
+    name = " Dominican Republic "
+) %>%
+    plotly::add_trace(
+        x = ~date,
+        y = ~Jamaica,
+        type = "scatter",
+        mode = "lines+markers",
+        name = " Jamaica "
+    ) %>%
+    plotly::add_trace(
+        x = ~date,
+        y = ~Cuba,
+        type = "scatter",
+        mode = "lines+markers",
+        name = " Cuba "
+    ) %>%
+   
+        plotly::layout(
+        title = "  ",
+        legend = list(x = 0.1, y = 0.9),
+        yaxis = list(title = "New confirmed cases"),
+        xaxis = list(title = "Date"),
+        # paper_bgcolor = "black",
+        # plot_bgcolor = "black",
+        # font = list(color = 'white'),
+        hovermode = "compare",
+        margin = list(
+            # l = 60,
+            # r = 40,
+            b = 10,
+            t = 10,
+            pad = 2
+        )
+    )
+
+
+```
+ 
+### **Cases distribution by type**
+
+```{r daily_summary}
+df_EU <- coronavirus %>%
+  # dplyr::filter(date == max(date)) %>%
+  dplyr::filter(country == "Haiti" |
+    country == "Dominican Republic" |
+    country == "Jamaica" |
+    country == "Cuba") %>%
+  dplyr::group_by(country, type) %>%
+  dplyr::summarise(total = sum(cases)) %>%
+  tidyr::pivot_wider(
+    names_from = type,
+    values_from = total
+  ) %>%
+  # dplyr::mutate(unrecovered = confirmed - ifelse(is.na(recovered), 0, recovered) - ifelse(is.na(death), 0, death)) %>%
+  dplyr::mutate(unrecovered = confirmed - ifelse(is.na(death), 0, death)) %>%
+  dplyr::arrange(confirmed) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(country = dplyr::if_else(country == "United Arab Emirates", "UAE", country)) %>%
+  dplyr::mutate(country = dplyr::if_else(country == "Mainland China", "China", country)) %>%
+  dplyr::mutate(country = dplyr::if_else(country == "North Macedonia", "N.Macedonia", country)) %>%
+      dplyr::mutate(country = dplyr::if_else(country == "Canada", "Canada", country)) %>%
+     
+  dplyr::mutate(country = trimws(country)) %>%
+  dplyr::mutate(country = factor(country, levels = country))
+
+plotly::plot_ly(
+  data = df_EU,
+  x = ~country,
+  # y = ~unrecovered,
+  y = ~ confirmed,
+  # text =  ~ confirmed,
+  # textposition = 'auto',
+  type = "bar",
+  name = "Total cases",
+  marker = list(color = active_color)
+) %>%
+  plotly::add_trace(
+    y = ~death,
+    # text =  ~ death,
+    # textposition = 'auto',
+    name = "Death",
+    marker = list(color = death_color)
+  ) %>%
+  plotly::layout(
+    barmode = "stack",
+    yaxis = list(title = "Total cases"),
+    xaxis = list(title = ""),
+    hovermode = "compare",
+    margin = list(
+      # l = 60,
+      # r = 40,
+      b = 10,
+      t = 10,
+      pad = 2
+    )
+  )
+
+```
+
+
+Deaths Comparison
+=======================================================================
+
+
+Column {data-width=400}
+-------------------------------------
+
+
+ 
+### **Deaths distribution **
+
+
+```{r deaths_summary}
+df_EU <- coronavirus %>%
+  # dplyr::filter(date == max(date)) %>%
+  dplyr::filter(country == "Haiti" |
+    country == "Dominican Republic" |
+    country == "Jamaica" |
+    country == "Cuba") %>%
+  dplyr::group_by(country, type) %>%
+  dplyr::summarise(total = sum(cases)) %>%
+  tidyr::pivot_wider(
+    names_from = type,
+    values_from = total
+  ) %>%
+  # dplyr::mutate(unrecovered = confirmed - ifelse(is.na(recovered), 0, recovered) - ifelse(is.na(death), 0, death)) %>%
+  dplyr::mutate(unrecovered = confirmed - ifelse(is.na(death), 0, death)) %>%
+  dplyr::arrange(confirmed) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(country = dplyr::if_else(country == "United Arab Emirates", "UAE", country)) %>%
+  dplyr::mutate(country = dplyr::if_else(country == "Mainland China", "China", country)) %>%
+  dplyr::mutate(country = dplyr::if_else(country == "North Macedonia", "N.Macedonia", country)) %>%
+      dplyr::mutate(country = dplyr::if_else(country == "Canada", "Canada", country)) %>%
+  
+  dplyr::mutate(country = trimws(country)) %>%
+  dplyr::mutate(country = factor(country, levels = country))
+plotly::plot_ly(
+  data = df_EU,
+  x = ~country,
+  # y = ~unrecovered,
+  y = ~ death,
+  # text =  ~ confirmed,
+  # textposition = 'auto',
+  type = "bar",
+  name = "Total deaths",
+  marker = list(color = death_color)
+) %>%
+  
+  plotly::layout(
+    barmode = "stack",
+    yaxis = list(title = "Total deaths"),
+    xaxis = list(title = ""),
+    hovermode = "compare",
+    margin = list(
+      # l = 60,
+      # r = 40,
+      b = 10,
+      t = 10,
+      pad = 2
+    )
+  )
+
+```
+
+14 Days Forecasts
+=======================================================================
+
+### **14 Days Forecasts for Cuba**
+
+```{r Forecasts_summary}
+
+
+library(tidyverse)
+library(tsibble)
+library(lubridate)
+library(fable)
+library(tidyquant)
+
+
+corona_Can<-readr::read_csv("00_data/coronatsCu.csv") %>% 
+    as_tsibble()
+
+corona_dat<- corona_Can %>%
+    model(
+        
+        ets= ETS(New_Cases ~ error("A") + trend("A") + season("A")),
+        arima = ARIMA(New_Cases)
+    )%>%
+    mutate(mixed = (arima + ets) / 2)
+
+corona_dat
+fcats<- corona_dat %>%
+    
+    forecast(h = 14)
+
+hilo(fcats, level = 95, round (hilo, digits = 0))
+
+fcats %>%
+    
+    autoplot(corona_Can, level = 95) +
+    ggtitle("14 Days Forecasts for Cuba New Cases, Jan-19 2021") +
+    xlab("Date") + ylab("New Cases")+
+    theme_tq()
+
+```
+
+
+
+
+Map
+=======================================================================
+
+### **World map of cases, circles radius is on the log scale** (*use + and - icons to zoom in/out*)
+
+```{r}
+# map tab added by Art Steinmetz
+library(leaflet)
+library(leafpop)
+library(purrr)
+cv_data_for_plot <- coronavirus %>%
+  # dplyr::filter(country == "Haiti") %>%
+  dplyr::filter(cases > 0) %>%
+  dplyr::group_by(country, province, lat, long, type) %>%
+  dplyr::summarise(cases = sum(cases)) %>%
+  dplyr::mutate(log_cases = 2 * log(cases)) %>%
+  dplyr::ungroup()
+cv_data_for_plot.split <- cv_data_for_plot %>% split(cv_data_for_plot$type)
+pal <- colorFactor(c("orange", "red", "green"), domain = c("confirmed", "death", "recovered"))
+map_object <- leaflet() %>% addProviderTiles(providers$Stamen.Toner)
+names(cv_data_for_plot.split) %>%
+  purrr::walk(function(df) {
+    map_object <<- map_object %>%
+      addCircleMarkers(
+        data = cv_data_for_plot.split[[df]],
+        lng = ~long, lat = ~lat,
+        #                 label=~as.character(cases),
+        color = ~ pal(type),
+        stroke = FALSE,
+        fillOpacity = 0.8,
+        radius = ~log_cases,
+        popup = leafpop::popupTable(cv_data_for_plot.split[[df]],
+          feature.id = FALSE,
+          row.numbers = FALSE,
+          zcol = c("type", "cases", "country", "province")
+        ),
+        group = df,
+        #                 clusterOptions = markerClusterOptions(removeOutsideVisibleBounds = F),
+        labelOptions = labelOptions(
+          noHide = F,
+          direction = "auto"
+        )
+      )
+  })
+map_object %>%
+  addLayersControl(
+    overlayGroups = names(cv_data_for_plot.split),
+    options = layersControlOptions(collapsed = FALSE)
+  )
+```
+
+
+
+
+
+About
+=======================================================================
+
+**The Coronavirus Dashboard: the case of Haiti & Caribbean neighbours Cuba, Jamaica and the Dominican Republic**
+
+This Coronavirus dashboard: the case of Haiti compared to Caribbean neighbours Cuba, Jamaica and the Dominican Republic provides an overview of the 2019 Novel Coronavirus COVID-19 (2019-nCoV) epidemic for Haiti and the Caribbean. This dashboard is built with R using the R Markdown framework and was adapted from this [dashboard](https://ramikrispin.github.io/coronavirus_dashboard/){target="_blank"} by Rami Krispin. Our ambition is to refresh the data daily, however we rely on the [`{coronavirus}`] data being updated by Rami Krispin. The 14 Days Forecasts section will alternate between Caribbean countries every 4 Days. The Forecasts assume future values will behave like the past and does not take into account newly introduced measures to combat the pandemic. Although point forecasts are presented, look at the uncertainty around the estimate as per the shaded area on the graphic. Because of space we present only a single model forecasts (ets), which often represents the worse case scenario.
+
+**Code**
+
+The code behind this dashboard is available on [GitHub](https://github.com/AntoineSoetewey/coronavirus_dashboard){target="_blank"}.
+
+**Data**
+
+The input data for this dashboard is the dataset available from the [`{coronavirus}`](https://github.com/RamiKrispin/coronavirus){target="_blank"} R package. Make sure to download the development version of the package to have the latest data:
+
+```
+install.packages("devtools")
+devtools::install_github("RamiKrispin/coronavirus")
+```
+
+The raw data is pulled from the Johns Hopkins University Center for Systems Science and Engineering (JHU CCSE) Coronavirus [repository](https://github.com/RamiKrispin/coronavirus-csv){target="_blank"}.
+
+**Information**
+
+More information about this dashboard (and how to replicate it for your own country) can be found in this [article](https://statsandr.com/blog/how-to-create-a-simple-coronavirus-dashboard-specific-to-your-country-in-r/).
+
+**Update**
+
+The data is as of `r format(max(coronavirus$date), "%A %B %d, %Y")` and the dashboard has been updated on `r format(Sys.time(), "%A %B %d, %Y")`.
+
+<br>
+
+*Go back to [statsandr.com](https://statsandr.com/) (blog) or [antoinesoetewey.com](https://www.antoinesoetewey.com/) (personal website)*.
+
+
