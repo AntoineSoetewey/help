@@ -5,7 +5,7 @@ library(maps)
 dat <- iso3166
 dat <- rename(dat, "iso-a3" = a3)
 
-makan=read.csv(file.choose())
+makan=read.csv("hotel_bookings.csv")
 head(makan)
 myN=makan[,14]
 str(myN)
