@@ -1,2 +1,2 @@
 # help
-Repo for questions/help. [Contact me](https://statsandr.com/contact/) for questions
+Repo for questions/help. [Contact me](https://antoinesoetewey.com/contact/) for questions
