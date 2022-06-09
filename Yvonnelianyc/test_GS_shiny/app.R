@@ -9,6 +9,14 @@
 
 library(shiny)
 library(googlesheets4)
+library(ggplot2)
+
+options(
+  # whenever there is one account token found, use the cached token
+  gargle_oauth_email = TRUE,
+  # specify auth tokens should be stored in a hidden directory ".secrets"
+  gargle_oauth_cache = ".secrets"
+)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -18,7 +26,7 @@ ui <- fluidPage(
 
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
-        sidebarPanel(""
+        sidebarPanel(HTML('<p>See code on <a href="https://github.com/AntoineSoetewey/statistics-201/issues">GitHub</a>.</p>')
         ),
 
         # Show a plot of the generated distribution
@@ -34,7 +42,9 @@ server <- function(input, output) {
   dat <- read_sheet("https://docs.google.com/spreadsheets/d/1ZWkTwK8DwU70dDC7CnOm0EQL04cLo-g22FBdl5WiD70/edit?usp=sharing")
 
     output$distPlot <- renderPlot({
-        hist(dat$Value)
+        ggplot(dat) +
+        aes(y = Value) +
+        geom_boxplot(fill = "steelblue")
     })
 }
 
