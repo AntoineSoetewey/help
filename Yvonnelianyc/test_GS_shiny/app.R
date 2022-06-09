@@ -26,7 +26,7 @@ ui <- fluidPage(
 
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
-        sidebarPanel(HTML('<p>See code on <a href="https://github.com/AntoineSoetewey/statistics-201/issues">GitHub</a>.</p>')
+        sidebarPanel(HTML('<p>See code on <a href="https://github.com/AntoineSoetewey/help/tree/main/Yvonnelianyc">GitHub</a>.</p>')
         ),
 
         # Show a plot of the generated distribution

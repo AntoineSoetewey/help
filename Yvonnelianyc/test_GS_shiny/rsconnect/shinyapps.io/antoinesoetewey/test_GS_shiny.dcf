@@ -5,9 +5,9 @@ account: antoinesoetewey
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 6459448
-bundleId: 5992510
+bundleId: 5992520
 url: https://antoinesoetewey.shinyapps.io/test_GS_shiny/
-when: 1654779387.62353
-lastSyncTime: 1654779387.62354
+when: 1654779541.06512
+lastSyncTime: 1654779541.06518
 asMultiple: FALSE
 asStatic: FALSE
