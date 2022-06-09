@@ -39,7 +39,7 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
   
-  dat <- read_sheet("https://docs.google.com/spreadsheets/d/1ZWkTwK8DwU70dDC7CnOm0EQL04cLo-g22FBdl5WiD70/edit?usp=sharing")
+  dat <- read_sheet("https://docs.google.com/spreadsheets/d/1hTQuCXrhik7K699jJHDxJH90gNPSrTWEHPMwNy0avMo/edit?usp=sharing")
 
     output$distPlot <- renderPlot({
         ggplot(dat) +
